@@ -34,7 +34,6 @@ app.post('/github', async (request, response) => {
         const commit = payload.head_commit;
         try {
             const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-
             await channel.send(
                 `📦 **${repo}** received a new push on **${branch}**\n` +
                 `👤 Author: ${commit.author.name}\n` +
