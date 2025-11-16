@@ -68,7 +68,6 @@ app.post('/github', async (request, response) => {
     }
     response.sendStatus(200);
 });
-
 app.listen(process.env.PORT, () => {
     console.log(`GitHub webhook server running on port ${process.env.PORT}`);
 });
