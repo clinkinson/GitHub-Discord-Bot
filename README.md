@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-readme push test
+push test
