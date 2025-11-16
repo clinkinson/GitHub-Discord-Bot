@@ -58,17 +58,19 @@ app.post('/github', async (request, response) => {
 });
 
 function pushNotifMessage(payload, repo){
-    const branch = payload.pull_request.head.ref;
+    const branch = payload.ref.replace("refs/heads/", "");
     const commit = payload.head_commit;
-
+    if (!commit) {
+        return `Branch: ${branch} was removed from ${repo} by ${payload.sender.login}.`;
+    }
     return(`${repo} received new push on ${branch}\n` +
-           `Author: ${commit.author.name}\n` +
-           `Message: ${commit.message}\n` +
-           `URL: ${commit.url}`);
+        `Author: ${commit.author.name}\n` +
+        `Message: ${commit.message}\n` +
+        `URL: ${commit.url}`);
 }
 
 function pullNotifMessage(payload, repo) {
-    const branch = payload.ref.replace("refs/heads/", "");
+    const branch = payload.pull_request.head.ref;
     const action = payload.action;
     const title = payload.pull_request.title;
     const url = payload.pull_request.html_url;
@@ -76,23 +78,23 @@ function pullNotifMessage(payload, repo) {
     const reviewer = payload.requested_reviewer ? payload.requested_reviewer.login : 'Unknown Reviewer';
     if (action === "opened"){
         return(`${repo} received new pull request on ${branch}\n` +
-               `Title: ${title}\n` +
-               `Opened by: ${user}\n` +
-               `URL: ${url}`);
+            `Title: ${title}\n` +
+            `Opened by: ${user}\n` +
+            `URL: ${url}`);
     }
     else if (action === "closed" && payload.pull_request.merged){
         return(`${repo} pull request merged\n` +
-               `Branch: ${branch}\n` +
-               `Title: ${title}\n` +
-               `Closed by: ${user}\n` +
-               `URL: ${url}`);
+            `Branch: ${branch}\n` +
+            `Title: ${title}\n` +
+            `Closed by: ${user}\n` +
+            `URL: ${url}`);
     }
     else if (action === "review_requested"){
         return(`${repo} pull request review requested\n` +
-               `Branch: ${branch}\n` +
-               `Title: ${title}\n` +
-               `Requested by: ${reviewer}\n` +
-               `URL: ${url}`);
+            `Branch: ${branch}\n` +
+            `Title: ${title}\n` +
+            `Requested reviewer: ${reviewer}\n` +
+            `URL: ${url}`);
     }
     else
         return(`Error handling pull request notif for: ${repo}\n${url}`);
@@ -108,28 +110,28 @@ function issuesNotifMessage(payload, repo) {
 
     if (action === "opened"){
         return(`New Issue Request created for ${repo}:\n` +
-               `Title: ${title}\n` +
-               `Opened by: ${actor}\n` +
-               `URL: ${url}`);
+            `Title: ${title}\n` +
+            `Opened by: ${actor}\n` +
+            `URL: ${url}`);
     }
     else if (action === "closed"){
         return(`New Issue Request closed for ${repo}:\n` +
-               `Title: ${title}\n` +
-               `Closed by: ${actor}\n` +
-               `URL: ${url}`);
+            `Title: ${title}\n` +
+            `Closed by: ${actor}\n` +
+            `URL: ${url}`);
     }
     else if (action === "assigned"){
         return(`Issue in ${repo} reassigned:\n` +
-               `Title: ${title}\n` +
-               `Assigned TO: ${reviewer}\n` +
-               `Assigned BY: ${actor}\n` +
-               `URL: ${url}`);
+            `Title: ${title}\n` +
+            `Assigned TO: ${reviewer}\n` +
+            `Assigned BY: ${actor}\n` +
+            `URL: ${url}`);
     } else if (action === "labeled"){
         return(`Issue in ${repo} labeled:\n` +
-               `Title: ${title}\n` +
-               `Label: ${label}\n` +
-               `Labeled by: ${actor}\n` +
-               `URL: ${url}`);
+            `Title: ${title}\n` +
+            `Label: ${label}\n` +
+            `Labeled by: ${actor}\n` +
+            `URL: ${url}`);
     }
     else
         return(`Error handling pull request notif for: ${repo}\n${url}`);
