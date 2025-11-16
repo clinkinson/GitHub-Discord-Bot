@@ -27,30 +27,116 @@ function verifySignature(req) {
     return signature === expected;
 }
 
-app.post('/github', async (request, response) => {
-    if (!verifySignature(request))
-        return response.status(401).send('Invalid signature');
-    const event = request.headers['x-github-event'];
-    if (event === "push") {
-        const payload = request.body;
-        const repo = payload.repository.full_name;
-        const branch = payload.ref.replace("refs/heads/", "");
-        const commit = payload.head_commit;
+app.post('/github', async (req, res) => {
+    if (!verifySignature(req)) {
+        console.warn('Received invalid signature from webhook');
+        return res.status(401).send('Invalid signature');
+    }
+
+    const event = req.headers['x-github-event'];
+
+    // Handle push events
+    if (event === "push") {
+        const payload = req.body;
+        const repo = payload.repository.full_name; // e.g., "your-user/your-repo"
+        const branch = payload.ref.replace("refs/heads/", "");
+        const commit = payload.head_commit;
+
+        // --- MODIFIED: Get channel ID from map ---
+        const map = readRepoMap();
+        const channelId = map[repo]; // Find the channel ID mapped to this repo
+
+        // If this repo isn't in our map, just log it and do nothing
+        if (!channelId) {
+            console.log(`Received push from unmapped repo: ${repo}. Ignoring.`);
+            return res.sendStatus(200); // Send 200 so GitHub doesn't resend
+        }
+
+        try {
+            // Fetch the channel using the ID from our map
+            const channel = await client.channels.fetch(channelId); 
+
+            // Check if commit is null or undefined (can happen on new branch)
+            if (!commit) {
+                console.log(`Received push event for ${repo} with no head_commit (e.g., new branch).`);
+                return res.sendStatus(200);
+            }
+
+            await channel.send(
+                `📦 **${repo}** received a new push on **${branch}**\n` +
+                `👤 Author: ${commit.author.name}\n` +
+                `💬 Message: ${commit.message}\n` +
+                `🔗 ${commit.url}`
+            );
+        } catch (err) {
+            console.error(`Error sending Discord message for repo ${repo} to channel ${channelId}:`, err);
+        }
+        // --- END MODIFIED ---
+    }
+
+    res.sendStatus(200);
+});
+
+const fs = require('fs'); // <-- ADDED: File System module
+const mapFilePath = './repo-map.json';
+const commandPrefix = '!';
+function readRepoMap() {
+    try {
+        if (fs.existsSync(mapFilePath)) {
+            const data = fs.readFileSync(mapFilePath);
+            return JSON.parse(data);
+        }
+    } catch (err) {
+        console.error("Error reading repo map:", err);
+    }
+    // Return empty object on error or if file doesn't exist
+    return {}; 
+}
+function writeRepoMap(map) {
+    try {
+        // Write with pretty-printing (null, 2)
+        fs.writeFileSync(mapFilePath, JSON.stringify(map, null, 2));
+    } catch (err) {
+        console.error("Error writing repo map:", err);
+    }
+}
+client.on('messageCreate', async (message) => {
+    // Ignore bots and messages without the prefix
+    if (message.author.bot || !message.content.startsWith(commandPrefix)) {
+        return;
+    }
+
+    // Parse command and arguments
+    const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'setrepo') {
+        // Check if user has 'Manage Server' permission
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+            return message.reply("You need 'Manage Server' permissions to use this command.");
+        }
+
+        const repoName = args[0];
+        if (!repoName) {
+            return message.reply("Please provide a repository name in the format `user/repo`.\nExample: `!setrepo my-username/my-project`");
+        }
+        
+        // Use the ID of the channel where the command was run
+        const channelId = message.channel.id;
+
         try {
-            const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-            await channel.send(
-                `📦 **${repo}** received a new push on **${branch}**\n` +
-                `👤 Author: ${commit.author.name}\n` +
-                `💬 Message: ${commit.message}\n` +
-                `⏰ Commit Timestamp: ${commit.timestamp}\n` +
-                `🔗 ${commit.url}`
-            );
+            const map = readRepoMap();
+            map[repoName] = channelId; // Add or update the mapping
+            writeRepoMap(map);
+            
+            message.reply(`✅ Successfully mapped repository **${repoName}** to this channel.`);
         } catch (err) {
-            console.error("Error sending Discord message:", err);
+            console.error("Error in setrepo command:", err);
+            message.reply("An error occurred while trying to set the repo.");
         }
     }
-    response.sendStatus(200);
 });
+
 
 app.listen(process.env.PORT, () => {
     console.log(`GitHub webhook server running on port ${process.env.PORT}`);
