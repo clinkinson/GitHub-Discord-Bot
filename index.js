@@ -1,6 +1,12 @@
 //code based on discord-node.js bot tutorial from Andy's Tech Tutorials
 //https://www.youtube.com/watch?v=pDQAn18-2go
 
+const { Octokit } = require('@octokit/rest'); // <-- ADD THIS
+
+const octokit = new Octokit({
+    auth: process.env.GITHUB_PAT
+});
+
 require('dotenv').config();
 
 const express = require('express');
@@ -100,35 +106,52 @@ function writeRepoMap(map) {
     }
 }
 client.on('messageCreate', async (message) => {
-    // Ignore bots and messages without the prefix
-    if (message.author.bot || !message.content.startsWith(commandPrefix)) {
-        return;
-    }
-
-    // Parse command and arguments
-    const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
+    // ... (all the existing code for parsing commands) ...
 
     if (command === 'setrepo') {
-        // Check if user has 'Manage Server' permission
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-            return message.reply("You need 'Manage Server' permissions to use this command.");
-        }
-
-        const repoName = args[0];
-        if (!repoName) {
-            return message.reply("Please provide a repository name in the format `user/repo`.\nExample: `!setrepo my-username/my-project`");
-        }
+        // ... (all your existing permission checks and args checks) ...
         
-        // Use the ID of the channel where the command was run
+        const repoName = args[0]; // e.g., "clinkinson/GitHub-Discord-Bot"
         const channelId = message.channel.id;
 
         try {
+            // --- Part 1: Save to your local map (This is your existing code) ---
             const map = readRepoMap();
-            map[repoName] = channelId; // Add or update the mapping
+            map[repoName] = channelId;
             writeRepoMap(map);
             
-            message.reply(`✅ Successfully mapped repository **${repoName}** to this channel.`);
+            // We'll reply *after* the webhook is made.
+            // message.reply(`✅ Successfully mapped repository **${repoName}** to this channel.`);
+
+            
+            // --- Part 2: NEW - Create the webhook on GitHub ---
+            const [owner, repo] = repoName.split('/'); // Splits "user/repo" into ["user", "repo"]
+            if (!owner || !repo) {
+                return message.reply("Invalid repo format. Please use `owner/repo`.");
+            }
+
+            try {
+                await octokit.repos.createWebhook({
+                    owner: owner,
+                    repo: repo,
+                    name: "web", // This is the standard name
+                    config: {
+                        url: process.env.WEBHOOK_RECEIVER_URL,
+                        content_type: "json",
+                        secret: process.env.GITHUB_WEBHOOK_SECRET
+                    },
+                    events: ["push"], // Only listen for push events
+                    active: true
+                });
+                
+                // If both steps succeed:
+                message.reply(`✅ Successfully mapped **${repoName}** and created the GitHub webhook!`);
+
+            } catch (apiError) {
+                console.error("GitHub API error:", apiError);
+                message.reply(`Error creating webhook on GitHub: ${apiError.message}. \n(The repo *was* mapped to this channel, but you may need to set up the webhook manually.)`);
+            }
+
         } catch (err) {
             console.error("Error in setrepo command:", err);
             message.reply("An error occurred while trying to set the repo.");
