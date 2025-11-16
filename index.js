@@ -27,35 +27,29 @@ function verifySignature(req) {
     return signature === expected;
 }
 
-app.post('/github', async (req, res) => {
-    if (!verifySignature(req)) {
-        return res.status(401).send('Invalid signature');
-    }
-
-    const event = req.headers['x-github-event'];
-
-    // Handle push events
+app.post('/github', async (request, response) => {
+    if (!verifySignature(request))
+        return response.status(401).send('Invalid signature');
+    const event = request.headers['x-github-event'];
     if (event === "push") {
-        const payload = req.body;
+        const payload = request.body;
         const repo = payload.repository.full_name;
         const branch = payload.ref.replace("refs/heads/", "");
         const commit = payload.head_commit;
-
         try {
             const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-
             await channel.send(
                 `📦 **${repo}** received a new push on **${branch}**\n` +
                 `👤 Author: ${commit.author.name}\n` +
                 `💬 Message: ${commit.message}\n` +
+                `⏰ Commit Timestamp: ${commit.timestamp}\n` +
                 `🔗 ${commit.url}`
             );
         } catch (err) {
             console.error("Error sending Discord message:", err);
         }
     }
-
-    res.sendStatus(200);
+    response.sendStatus(200);
 });
 
 app.listen(process.env.PORT, () => {
