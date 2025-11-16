@@ -3,7 +3,6 @@
 
 require('dotenv').config();
 
-const axios = require('axios');
 const express = require('express');
 const crypto = require('crypto');
 const { Client, GatewayIntentBits } = require('discord.js');
