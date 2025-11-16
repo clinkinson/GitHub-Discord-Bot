@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "discord.js": "^14.24.2",
     "dotenv": "^17.2.3",
     "express": "^5.1.0"
