@@ -33,7 +33,6 @@ app.post('/github', async (request, response) => {
         const repo = payload.repository.full_name;
         const branch = payload.ref.replace("refs/heads/", "");
         const commit = payload.head_commit;
-
         try {
             const channel = await client.channels.fetch(process.env.CHANNEL_ID);
 
@@ -46,6 +45,25 @@ app.post('/github', async (request, response) => {
             );
         } catch (err) {
             console.error("Error sending Discord message:", err);
+        }
+    } else if (event === "pull") {
+        const action = payload.action;
+        const prTitle = payload.pull_request.title;
+        const prUrl = payload.pull_request.html_url;
+        const user = payload.pull_request.user.login;
+        let message;
+        if (action === "opened")
+            message = `New Pull Request formed: "${prTitle}" opened by ${user} @ ${repo}\n`;
+        else if (action === "closed" && payload.pull_request.merged)
+            message = `Pull Request merged: "${prTitle}" closed by ${user} @ ${repo}\n`;
+        else if (action === "review_requested"){
+            const reviewer = payload.requested_reviewer.login;
+            message = `Review requested: ${reviewer} on "${prTitle}" requested @ ${repo}\n`;
+        }
+        else
+            message = `error handling pull request: ${prTitle}\n`;
+        if (message) {
+            await channel.send(message);
         }
     }
     response.sendStatus(200);
