@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-final push test, hopefully
+branch then pull
