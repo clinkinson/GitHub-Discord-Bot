@@ -58,10 +58,10 @@ app.post('/github', async (req, res) => {
             }
       await channel.send(
         `📦 **${repo}** received a new push on **${branch}**\n` +
-        `👤 Author: ${commit.author.name}\n` +
-        `💬 Message: ${commit.message}\n` +
-        `⏰ Timestamp: ${commit.timestamp}\n` +
-        `🔗 ${commit.url}`
+        `👤 Author: ${payload.commit.author.name}\n` +
+        `💬 Message: ${payload.commit.message}\n` +
+        `⏰ Timestamp: ${payload.commit.timestamp}\n` +
+        `🔗 ${payload.commit.url}`
       );
     } catch (err) {
       console.error(`Error sending Discord message for repo ${repo} to channel ${channelId}:`, err);
@@ -116,12 +116,8 @@ client.on('messageCreate', async (message) => {
     }
     const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
-    // ... (all the existing code for parsing commands) ...
-
     if (command === 'setrepo') {
-        // ... (all your existing permission checks and args checks) ...
-
-        const repoName = args[0]; // e.g., "clinkinson/GitHub-Discord-Bot"
+        const repoName = args[0];
         if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
             return message.reply("You need 'Manage Server' permissions to use this command.");
         }
@@ -131,18 +127,11 @@ client.on('messageCreate', async (message) => {
         }
         const channelId = message.channel.id;
         try {
-            // --- Part 1: Save to your local map (This is your existing code) ---
             const map = readRepoMap();
             map[repoName] = channelId;
             writeRepoMap(map);
             message.reply(`✅ Successfully mapped repository **${repoName}** to this channel.`);
-
-            // We'll reply *after* the webhook is made.
-            // message.reply(`✅ Successfully mapped repository **${repoName}** to this channel.`);
-
-
-            // --- Part 2: NEW - Create the webhook on GitHub ---
-            const [owner, repo] = repoName.split('/'); // Splits "user/repo" into ["user", "repo"]
+            const [owner, repo] = repoName.split('/');
             if (!owner || !repo) {
                 return message.reply("Invalid repo format. Please use `owner/repo`.");
             }
