@@ -62,4 +62,4 @@ app.listen(process.env.PORT, () => {
     console.log(`GitHub webhook server running on port ${process.env.PORT}`);
 });
 
-client.login(process.env.DISCORD_BOT_ID);
+client.login(process.env.DISCORD_BOT_TOKEN);
