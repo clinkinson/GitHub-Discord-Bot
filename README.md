@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-hey hackcamp, check out this bot!!!
+hello hackcamp 2025, check out this bot :P
