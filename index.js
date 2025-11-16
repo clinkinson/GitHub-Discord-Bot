@@ -64,6 +64,28 @@ app.post('/github', async (request, response) => {
         if (message) {
             await channel.send(message);
         }
+    } else if (event === "issues") {
+        const issueAction = payload.action;
+        const issueTitle = payload.issue.title;
+        const issueUrl = payload.issue.html_url;
+        const repoName = payload.repository.full_name;
+        const actor = payload.sender.login;
+
+        let issueMessage;
+
+        if (issueAction === "opened")
+            issueMessage = `New Issue Request in ${repoName}: "${issueTitle}" opened by ${actor} @ ${issueUrl}\n`;
+        else if (issueAction === "closed")
+            issueMessage = `Issue closed in ${repoName}: "${issueTitle}" closed by ${actor}\n`;
+        else if (issueAction === "assigned"){
+            const reviewer = payload.issue.assignee.login;
+            issueMessage = `Issue in ${issueUrl}: ${issueTitle} assigned to "${reviewer}" by ${actor}\n`;
+        } else if (issueAction === "labled"){
+            const label = payload.label.name;
+            issueMessage = `Issue labeled ${label} in ${issueUrl}: ${issueTitle} labeled by "${actor}"\n`;
+        }
+        else
+            issueMessage = `error handling pull request: ${issueTitle}\n`;
     }
     response.sendStatus(200);
 });
