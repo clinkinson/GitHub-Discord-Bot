@@ -28,19 +28,19 @@ function verifySignature(req) {
 }
 
 app.post('/github', async (req, res) => {
-    if (!verifySignature(req)) {
+   if (!verifySignature(req)) {
         console.warn('Received invalid signature from webhook');
-        return res.status(401).send('Invalid signature');
-    }
+    return res.status(401).send('Invalid signature');
+  }
 
-    const event = req.headers['x-github-event'];
+  const event = req.headers['x-github-event'];
 
-    // Handle push events
-    if (event === "push") {
-        const payload = req.body;
-        const repo = payload.repository.full_name; // e.g., "your-user/your-repo"
-        const branch = payload.ref.replace("refs/heads/", "");
-        const commit = payload.head_commit;
+  // Handle push events
+  if (event === "push") {
+    const payload = req.body;
+    const repo = payload.repository.full_name; // e.g., "your-user/your-repo"
+    const branch = payload.ref.replace("refs/heads/", "");
+    const commit = payload.head_commit;
 
         // --- MODIFIED: Get channel ID from map ---
         const map = readRepoMap();
@@ -51,30 +51,29 @@ app.post('/github', async (req, res) => {
             console.log(`Received push from unmapped repo: ${repo}. Ignoring.`);
             return res.sendStatus(200); // Send 200 so GitHub doesn't resend
         }
-
-        try {
+    try {
             // Fetch the channel using the ID from our map
-            const channel = await client.channels.fetch(channelId); 
+      const channel = await client.channels.fetch(channelId);
 
-            // Check if commit is null or undefined (can happen on new branch)
+      // Check if commit is null or undefined (can happen on new branch)
             if (!commit) {
                 console.log(`Received push event for ${repo} with no head_commit (e.g., new branch).`);
                 return res.sendStatus(200);
             }
 
-            await channel.send(
-                `📦 **${repo}** received a new push on **${branch}**\n` +
-                `👤 Author: ${commit.author.name}\n` +
-                `💬 Message: ${commit.message}\n` +
-                `🔗 ${commit.url}`
-            );
-        } catch (err) {
-            console.error(`Error sending Discord message for repo ${repo} to channel ${channelId}:`, err);
-        }
+      await channel.send(
+        `📦 **${repo}** received a new push on **${branch}**\n` +
+        `👤 Author: ${commit.author.name}\n` +
+        `💬 Message: ${commit.message}\n` +
+        `🔗 ${commit.url}`
+      );
+    } catch (err) {
+      console.error(`Error sending Discord message for repo ${repo} to channel ${channelId}:`, err);
+    }
         // --- END MODIFIED ---
-    }
+  }
 
-    res.sendStatus(200);
+  res.sendStatus(200);
 });
 
 const fs = require('fs'); // <-- ADDED: File System module
