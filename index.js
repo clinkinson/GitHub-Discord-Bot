@@ -21,7 +21,7 @@ function verifySignature(req) {
     const expected = "sha256=" +
         crypto
             .createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
-            .update(req.rawBody)
+            .update(req.rawBuf)
             .digest("hex");
 
     return signature === expected;
