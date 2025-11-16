@@ -28,13 +28,13 @@ app.post('/github', async (request, response) => {
         return response.status(401).send('Invalid signature');
     const event = request.headers['x-github-event'];
 
+    const payload = request.body;
+    const channel = await client.channels.fetch(process.env.CHANNEL_ID);
     if (event === "push") {
-        const payload = request.body;
         const repo = payload.repository.full_name;
         const branch = payload.ref.replace("refs/heads/", "");
         const commit = payload.head_commit;
         try {
-            const channel = await client.channels.fetch(process.env.CHANNEL_ID);
             await channel.send(
                 `📦 **${repo}** received a new push on **${branch}**\n` +
                 `👤 Author: ${commit.author.name}\n` +
@@ -86,6 +86,9 @@ app.post('/github', async (request, response) => {
         }
         else
             issueMessage = `error handling pull request: ${issueTitle}\n`;
+        if (issueMessage) {
+            await channel.send(issueMessage);
+        }
     }
     response.sendStatus(200);
 });
