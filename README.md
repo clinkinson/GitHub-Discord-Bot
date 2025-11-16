@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-Take a look at this
+hey! take a look at this app!!!
