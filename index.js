@@ -27,6 +27,7 @@ app.post('/github', async (request, response) => {
     if (!verifySignature(request))
         return response.status(401).send('Invalid signature');
     const event = request.headers['x-github-event'];
+
     if (event === "push") {
         const payload = request.body;
         const repo = payload.repository.full_name;
