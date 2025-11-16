@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-reretested
+tested
