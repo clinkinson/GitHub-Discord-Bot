@@ -21,7 +21,6 @@ function verifySignature(req) {
             .createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
             .update(req.rawBuf)
             .digest("hex");
-
     return signature === expected;
 }
 app.post('/github', async (request, response) => {
