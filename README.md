@@ -1,3 +1,3 @@
 # GitHub-Discord-Bot
 
-branch then pull
+readme push test
